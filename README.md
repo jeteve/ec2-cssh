@@ -137,6 +137,12 @@ To install CsshX for Mac OSX:
 
     brew install csshx
 
+# ABOUT
+
+This code is released under the same licence as Perl5 itself.
+
+Copyright Jerome Eteve (jerome@eteve.net) 2015.
+
 # SEE ALSO
 
 Cluster SSH (Linux) Homepage: [https://github.com/duncs/clusterssh/wiki](https://github.com/duncs/clusterssh/wiki)
