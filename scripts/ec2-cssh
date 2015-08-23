@@ -1,0 +1,12 @@
+#! /usr/bin/env perl -wT
+#-*- mode: Perl -*-
+
+use lib 'lib';
+
+use strict;
+use warnings;
+use Net::Amazon::EC2::Cssh;
+
+my $cssh = Net::Amazon::EC2::Cssh->new();
+
+$cssh->main();
