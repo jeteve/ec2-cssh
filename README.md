@@ -81,7 +81,24 @@ CsshX for Mac OSX.
        'command' => q|csshX --screen 1 { join(' ' , map{ '<your username>@'.$_.':22' }  @hosts ) }|
     }
 
-# SPLIT CONFIGURATION
+# INSTANCES SET CONFIGURATION
+
+The format of a set configuration follows the following structure:
+
+    'set' => {
+       InstanceId => [ 'instanceID1' , 'instanceID2', ... ],
+       Filters => [
+          [ 'Filter name', 'Filter value1' , 'Filter value 2', ... ],
+          .. Other filters ..
+       ]
+     }
+
+Both InstanceID and Filters are optional.
+
+See [http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInstances.html](http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInstances.html) for all available
+ways of filtering instances.
+
+## SPLIT CONFIGURATION
 
 Having a config file is fine, but what if you want to keep your credentials secret, and have
 your EC2 sets of machine in a .ec2cssh.conf file per projects?
