@@ -14,10 +14,11 @@ use Log::Any qw/$log/;
 
 # Config stuff.
 has 'config' => ( is => 'ro', isa => 'HashRef', lazy_build => 1);
-has 'config_file' => ( is => 'ro' , isa => 'Str', lazy_build => 1);
+has 'config_file' => ( is => 'ro' , isa => 'Maybe[Str]');
+has 'config_files' => ( is => 'ro' , isa => 'ArrayRef[Str]' , lazy_build => 1);
 
 # Run options stuff
-has 'set' => ( is => 'ro' , isa => 'Maybe[Str]', default => sub{ undef; } );
+has 'set' => ( is => 'ro' , isa => 'Str', required => 1 );
 
 # Operational stuff.
 has 'ec2' => ( is => 'ro', isa => 'Net::Amazon::EC2', lazy_build => 1);
@@ -25,22 +26,39 @@ has 'ec2' => ( is => 'ro', isa => 'Net::Amazon::EC2', lazy_build => 1);
 
 sub _build_config{
     my ($self) = @_;
-    return do $self->config_file;
+    my $config = {};
+    foreach my $file (reverse  @{$self->config_files()} ){
+        $log->info("Loading $file..");
+        my $file_config =  do $file;
+
+        my $ec2_config = { %{ $config->{ec2_config} || {} } , %{ $file_config->{ec2_config} || {} } };
+        my $ec2_sets   = { %{ $config->{ec2_sets} || {} } , %{ $file_config->{ec2_sets} || {} } };
+        $config = { %{$config} , %{$file_config} , 'ec2_config' => $ec2_config , ec2_sets => $ec2_sets };
+    }
+
+    $log->info("Available sets: " .( join(', ', sort keys %{$config->{ec2_sets}})));
+    return $config;
 }
 
-sub _build_config_file{
+sub _build_config_files{
     my ($self) = @_;
-    my @candidates = ( File::Spec->catfile( getcwd() , '.ec2cssh.conf' ),
-                       File::Spec->catfile( $ENV{HOME} , '.ec2cssh.conf' ),
-                       File::Spec->catfile( 'etc' , 'ec2ssh.conf' )
-                     );
+    my @candidates = (
+        ( $self->config_file() ? $self->config_file() : () ),
+        File::Spec->catfile( getcwd() , '.ec2cssh.conf' ),
+        File::Spec->catfile( $ENV{HOME} , '.ec2cssh.conf' ),
+        File::Spec->catfile( '/' , 'etc' , 'ec2ssh.conf' )
+      );
+    my @files = ();
     foreach my $candidate ( @candidates ){
         if( -r $candidate ){
             $log->info("Found config file '$candidate'");
-            return $candidate;
+            push @files , $candidate;
         }
     }
-    die "Cannot find any config files amongst ".join(', ' , @candidates )."\n";
+    unless( @files ){
+        die "Cannot find any config files amongst ".join(', ' , @candidates )."\n";
+    }
+    return \@files;
 }
 
 sub _build_ec2{
@@ -48,7 +66,7 @@ sub _build_ec2{
 
     # Hack so we never verify Amazon's host. Whilst still keeping HTTPS
     IO::Socket::SSL::set_defaults( SSL_verify_callback => sub{ return 1; } );
-    my $ec2 =  Net::Amazon::EC2->new({ %{ $self->config()->{ec2_config} } , ssl => 1 } );
+    my $ec2 =  Net::Amazon::EC2->new({ %{ $self->config()->{ec2_config} || die "No ec2_config in config\n" } , ssl => 1 } );
     return $ec2;
 }
 
@@ -56,7 +74,7 @@ sub main{
     my ($self) = @_;
 
     my @hosts;
-    $log->info("Listing instances for set='".( $self->set() || 'ALL' )."'");
+    $log->info("Listing instances for set='".$self->set()."'");
 
     my $set_config = {};
     if( $self->set() ){
@@ -101,7 +119,7 @@ sub main{
     }
     my $sys_return = system( $command );
     $log->info("Done (returned $sys_return)");
-    return 1;
+    return $sys_return;
 }
 
 __PACKAGE__->meta->make_immutable();

@@ -8,22 +8,172 @@ use warnings;
 
 use Getopt::Long;
 use Net::Amazon::EC2::Cssh;
+use Log::Any qw/$log/;
 use Log::Any::Adapter qw/Stdout log_level info/;
+use Pod::Usage;
 
 my $set;
 my $verbose;
 my $config;
+my $help;
 
 GetOptions(
     "config=s" => \$config,
     "set=s" => \$set,
-    "verbose" => \$verbose
+    "verbose" => \$verbose,
+    "help" => \$help,
 );
 
 if( $verbose ){
     Log::Any::Adapter->set('Stdout' , log_level => 'trace' );
 }
 
-my $cssh = Net::Amazon::EC2::Cssh->new({ set => $set , ( $config ? ( config_file => $config ) : () )  });
 
-$cssh->main();
+if( $help  ){
+    Pod::Usage::pod2usage( -input => __FILE__ , -verbose => 2,
+                           -message => 'Generating help'
+                       );
+}
+
+eval{
+    unless( $set ){
+        my $cssh = Net::Amazon::EC2::Cssh->new({ set => 'NONE' , ( $config ? ( config_file => $config ) : () )  });
+        $cssh->config()->{ec2_sets};
+        die "No set defined. Do ec2-cssh -s=<one available set>\n";
+    }
+    my $cssh = Net::Amazon::EC2::Cssh->new({ set => $set , ( $config ? ( config_file => $config ) : () )  });
+    exit($cssh->main());
+};
+if( my $err = $@ ){
+    $log->error("An error occured:\n $err");
+    $log->error("Run $0 --help");
+    exit(1);
+}
+
+__END__
+
+=head1 NAME
+
+ec2-cssh - Cluster SSH your EC2 instances
+
+=head1 SYNOPSIS
+
+Cssh using a predefined set called 'frontend' in your config file (see CONFIGURATION section):
+
+  ec2-ssh -s=frontends
+
+=head1 OPTIONS
+
+=over
+
+=item --set=<name>, -s=<name>
+
+B<Required.> Use the set <name> of instances defined in your config file
+
+=item --verbose, -v
+
+Go in verbose mode
+
+=item --config=<config file>, -c=<config file>
+
+Use the config file instead of the automatically detected one (see CONFIGURATION section)
+
+=item --help, -h
+
+Display this help.
+
+=back
+
+=head1 CONFIGURATION
+
+ec2-cssh relies on a configuration files to hold your Amazon AWS EC2 settings, your machine set settings
+and the command line to use to ClusterSSH onto your machines.
+
+If no --config option is given, ec2-cssh will look for the following files in order: B<.ec2ssh.conf>, B<$HOME/.ec2ssh.conf>, B</etc/ec2ssh.conf>
+
+=head2 Linux Config example:
+
+In this example, only one instances set 'mytagvalue' defined. This
+set will generate all the instances with a tag 'mytag' having a value 'myvalue'
+
+ {
+    'ec2_config' => {
+        AWSAccessKeyId => '.. Your access Key ID ..',
+        SecretAccessKey => '.. Your secret access Key ..',
+        region => 'eu-west-1',
+        debug => 0,
+    },
+    'ec2_sets' => {
+        'mytagvalue' => {
+            'Filter' =>  [
+                [ 'tag:mytag' , 'myvalue' ],
+            ]
+        }
+    },
+    'command' => q|cssh { join(' ' , map{ 'jerome@'.$_ }  @hosts ) }|
+  }
+
+Then you can do:
+
+  $ ec2-ssh -s=mytagvalue
+
+=head2 OSX Config example:
+
+Only the command changes. See Section 'INSTALLING cssh' for more help on
+CsshX for Mac OSX.
+
+ {
+    .. Same a Linux. Only this changes: ..
+    'command' => q|csshX --screen 1 { join(' ' , map{ 'jerome@'.$_.':22' }  @hosts ) }|
+ }
+
+=head1 SPLIT CONFIGURATION
+
+Having a config file is fine, but what if you want to keep your credentials secret, and have
+your EC2 sets of machine in a .ec2cssh.conf file per projects?
+
+With ec2-cssh, this is possible by splitting the configuration in severl files.
+For instance, you can have:
+
+=over
+
+=item .ec2cssh.conf in your project directory:
+
+  {
+     'ec2_config' => { region => 'project-specific-aws-region' },
+     'ec2_sets' => { 'projectspecificset' => ... },
+  }
+
+=item $HOME/.ec2cssh.conf:
+
+  {
+     'ec2_config' => { .. Your credentials },
+     'ec2_sets' => { 'asetilike' => ... }
+  }
+
+=item /etc/ec2cssh.conf:
+
+  {
+    ec2_sets => { 'asystemwideset' => .. }
+    command => '.. System wide Cssh command ..'
+  }
+
+=back
+
+=head2 INSTALLING cssh
+
+To install cssh on Linux (Debian):
+
+  sudo  apt-get install clusterssh
+
+To install CsshX for Mac OSX:
+
+   brew install csshx
+
+=head1 SEE ALSO
+
+Cluster SSH (Linux) Homepage: L<https://github.com/duncs/clusterssh/wiki>
+
+CsshX (Mac OSX) Homepage: L<https://github.com/brockgr/csshx>
+
+=cut
