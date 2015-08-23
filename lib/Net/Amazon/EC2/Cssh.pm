@@ -1,11 +1,14 @@
 package Net::Amazon::EC2::Cssh;
 
 use Moose;
-use Data::Dumper;
+
+use autodie qw/:all/;
 use Cwd;
 use File::Spec;
 use IO::Socket::SSL;
 use Net::Amazon::EC2;
+use Safe;
+use Text::Template;
 
 use Log::Any qw/$log/;
 
@@ -18,6 +21,7 @@ has 'set' => ( is => 'ro' , isa => 'Maybe[Str]', default => sub{ undef; } );
 
 # Operational stuff.
 has 'ec2' => ( is => 'ro', isa => 'Net::Amazon::EC2', lazy_build => 1);
+
 
 sub _build_config{
     my ($self) = @_;
@@ -78,6 +82,26 @@ sub main{
     }
 
     $log->info("Got ".scalar( @hosts )." hosts");
+
+    my $tmpl = Text::Template->new( TYPE => 'STRING',
+                                    SOURCE => $self->config()->{command} || die "Missing command in config\n"
+                                );
+    unless( $tmpl->compile() ){
+        die "Cannot compile template from '".$self->config()->{command}."' ERROR:".$Text::Template::ERROR."\n";
+    }
+
+    my $command = $tmpl->fill_in( SAFE => Safe->new(),
+                                  HASH => {
+                                      hosts => \@hosts
+                                  }
+                              );
+    $log->info("Will do '".substr($command, 0, 80)."..'");
+    if( $log->is_debug() ){
+        $log->debug($command);
+    }
+    my $sys_return = system( $command );
+    $log->info("Done (returned $sys_return)");
+    return 1;
 }
 
 __PACKAGE__->meta->make_immutable();

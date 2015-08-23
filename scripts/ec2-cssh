@@ -1,4 +1,4 @@
-#! /usr/bin/env perl -wT
+#! /usr/bin/env perl -w
 #-*- mode: Perl -*-
 
 use lib 'lib';
@@ -12,8 +12,10 @@ use Log::Any::Adapter qw/Stdout log_level info/;
 
 my $set;
 my $verbose;
+my $config;
 
 GetOptions(
+    "config=s" => \$config,
     "set=s" => \$set,
     "verbose" => \$verbose
 );
@@ -22,6 +24,6 @@ if( $verbose ){
     Log::Any::Adapter->set('Stdout' , log_level => 'trace' );
 }
 
-my $cssh = Net::Amazon::EC2::Cssh->new({ set => $set });
+my $cssh = Net::Amazon::EC2::Cssh->new({ set => $set , ( $config ? ( config_file => $config ) : () )  });
 
 $cssh->main();
