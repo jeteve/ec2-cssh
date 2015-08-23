@@ -57,6 +57,18 @@ __END__
 
 ec2-cssh - Cluster SSH your EC2 instances
 
+=head1 INSTALLATION
+
+This is a standard Perl package.
+
+On system Perl:
+
+  cpan -i App::EC2Cssh
+
+With cpanm:
+
+  cpanm App::EC2Cssh
+
 =head1 SYNOPSIS
 
 Cssh using a predefined set called 'frontend' in your config file (see CONFIGURATION section):
@@ -111,7 +123,7 @@ set will generate all the instances with a tag 'mytag' having a value 'myvalue'
             ]
         }
     },
-    'command' => q|cssh { join(' ' , map{ 'jerome@'.$_ }  @hosts ) }|
+    'command' => q|cssh { join(' ' , map{ '<your username>@'.$_.':22' }  @hosts ) }|
   }
 
 Then you can do:
@@ -125,7 +137,7 @@ CsshX for Mac OSX.
 
  {
     .. Same a Linux. Only this changes: ..
-    'command' => q|csshX --screen 1 { join(' ' , map{ 'jerome@'.$_.':22' }  @hosts ) }|
+    'command' => q|csshX --screen 1 { join(' ' , map{ '<your username>@'.$_.':22' }  @hosts ) }|
  }
 
 =head1 SPLIT CONFIGURATION
