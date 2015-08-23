@@ -1,6 +1,16 @@
-package Net::Amazon::EC2::Cssh;
+package App::EC2Cssh;
 
 use Moose;
+
+=head1 NAME
+
+App::EC2Cssh - Package for ec2-cssh CLI application
+
+=head1 SYNOSPSIS
+
+See L<ec2-cssh>
+
+=cut
 
 use autodie qw/:all/;
 use Cwd;
@@ -123,4 +133,3 @@ sub main{
 }
 
 __PACKAGE__->meta->make_immutable();
-

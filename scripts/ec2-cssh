@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use Net::Amazon::EC2::Cssh;
+use App::EC2Cssh;
 use Log::Any qw/$log/;
 use Log::Any::Adapter qw/Stdout log_level info/;
 use Pod::Usage;
@@ -37,11 +37,12 @@ if( $help  ){
 
 eval{
     unless( $set ){
-        my $cssh = Net::Amazon::EC2::Cssh->new({ set => 'NONE' , ( $config ? ( config_file => $config ) : () )  });
-        $cssh->config()->{ec2_sets};
+        my $cssh = App::EC2Cssh->new({ set => 'NONE' , ( $config ? ( config_file => $config ) : () )  });
+        # This will trigger the calculation (and name output) of sets.
+        my $sets = $cssh->config()->{ec2_sets};
         die "No set defined. Do ec2-cssh -s=<one available set>\n";
     }
-    my $cssh = Net::Amazon::EC2::Cssh->new({ set => $set , ( $config ? ( config_file => $config ) : () )  });
+    my $cssh = App::EC2Cssh->new({ set => $set , ( $config ? ( config_file => $config ) : () )  });
     exit($cssh->main());
 };
 if( my $err = $@ ){
