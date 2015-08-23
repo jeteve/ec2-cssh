@@ -5,8 +5,23 @@ use lib 'lib';
 
 use strict;
 use warnings;
-use Net::Amazon::EC2::Cssh;
 
-my $cssh = Net::Amazon::EC2::Cssh->new();
+use Getopt::Long;
+use Net::Amazon::EC2::Cssh;
+use Log::Any::Adapter qw/Stdout log_level info/;
+
+my $set;
+my $verbose;
+
+GetOptions(
+    "set=s" => \$set,
+    "verbose" => \$verbose
+);
+
+if( $verbose ){
+    Log::Any::Adapter->set('Stdout' , log_level => 'trace' );
+}
+
+my $cssh = Net::Amazon::EC2::Cssh->new({ set => $set });
 
 $cssh->main();
