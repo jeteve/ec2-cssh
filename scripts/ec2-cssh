@@ -102,7 +102,7 @@ Display this help.
 ec2-cssh relies on a configuration files to hold your Amazon AWS EC2 settings, your machine set settings
 and the command line to use to ClusterSSH onto your machines.
 
-If no --config option is given, ec2-cssh will look for the following files in order: B<.ec2ssh.conf>, B<$HOME/.ec2ssh.conf>, B</etc/ec2ssh.conf>
+If no --config option is given, ec2-cssh will look for the following files in order: B<.ec2cssh.conf>, B<$HOME/.ec2cssh.conf>, B</etc/ec2cssh.conf>
 
 =head2 Linux Config example:
 
