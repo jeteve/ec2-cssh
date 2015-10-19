@@ -1,4 +1,4 @@
-#! /usr/bin/env perl -w
+#! /usr/bin/env perl
 #-*- mode: Perl -*-
 
 use lib 'lib';
