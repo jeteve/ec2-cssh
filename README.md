@@ -22,15 +22,15 @@ Cssh using a predefined set called 'frontend' in your config file (see CONFIGURA
 
 # OPTIONS
 
-- --set=<name>, -s=<name>
+- --set=&lt;name>, -s=&lt;name>
 
-    **Required.** Use the set <name> of instances defined in your config file
+    **Required.** Use the set &lt;name> of instances defined in your config file
 
 - --verbose, -v
 
     Go in verbose mode
 
-- --config=<config file>, -c=<config file>
+- --config=&lt;config file>, -c=&lt;config file>
 
     Use the config file instead of the automatically detected one (see CONFIGURATION section)
 
