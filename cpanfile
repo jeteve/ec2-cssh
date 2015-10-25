@@ -7,3 +7,4 @@ requires 'IO::Socket::SSL', '>= 2.012';
 requires 'Net::Amazon::EC2', '>= 0.30';
 requires 'Text::Template', '>= 1.46';
 requires 'Log::Any', '>= 1.032';
+requires 'IPC::System::Simple';
