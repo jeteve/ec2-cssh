@@ -145,13 +145,15 @@ $| = 1;
 sub do_demux_command{
     my ($self, $hosts) = @_;
 
+    $log->info("Will do ".$self->demux_command()." on each of the hosts");
+
     my $tmpl = Text::Template->new( TYPE => 'STRING',
                                     SOURCE => $self->demux_command() );
 
     my @finished = ();
     foreach my $host ( @$hosts ){
         my $command = $tmpl->fill_in( HASH => { host => $host } );
-        $log->info("Will do ".$command);
+        $log->debug("Will do ".$command);
         my $io_h = IO::Pipe->new()->reader( $command );
         my $w;
         my $finished = AnyEvent->condvar();
