@@ -20,11 +20,17 @@ Cssh using a predefined set called 'frontend' in your config file (see CONFIGURA
 
     ec2-ssh -s=frontends
 
+    ec2-ssh -s=frontends --demux 'ssh user@{$host} tail -f /var/log/syslog'
+
 # OPTIONS
 
 - --set=&lt;name>, -s=&lt;name>
 
     **Required.** Use the set &lt;name> of instances defined in your config file
+
+- --demux &lt;command>
+
+    Optional. Use this command and demux their output to the shell instead of launching a cssh interactive session.
 
 - --verbose, -v
 

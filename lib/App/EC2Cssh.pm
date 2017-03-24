@@ -20,6 +20,9 @@ use Net::Amazon::EC2;
 use Safe;
 use Text::Template;
 
+use IO::Pipe;
+use AnyEvent;
+
 use Log::Any qw/$log/;
 
 # Config stuff.
@@ -29,6 +32,7 @@ has 'config_files' => ( is => 'ro' , isa => 'ArrayRef[Str]' , lazy_build => 1);
 
 # Run options stuff
 has 'set' => ( is => 'ro' , isa => 'Str', required => 1 );
+has 'demux_command' => ( is => 'ro', isa => 'Maybe[Str]', required => 0, predicate => 'has_demux_command' );
 
 # Operational stuff.
 has 'ec2' => ( is => 'ro', isa => 'Net::Amazon::EC2', lazy_build => 1);
@@ -110,7 +114,11 @@ sub main{
     }
 
     $log->info("Got ".scalar( @hosts )." hosts");
+    if( $self->has_demux_command() ){
+        return $self->do_demux_command( \@hosts );
+    }
 
+    # No demux command, just carry on using the configured command for multiple hosts.
     my $tmpl = Text::Template->new( TYPE => 'STRING',
                                     SOURCE => $self->config()->{command} || die "Missing command in config\n"
                                 );
@@ -130,6 +138,39 @@ sub main{
     my $sys_return = system( $command );
     $log->info("Done (returned $sys_return)");
     return $sys_return;
+}
+
+$| = 1;
+
+sub do_demux_command{
+    my ($self, $hosts) = @_;
+
+    my $tmpl = Text::Template->new( TYPE => 'STRING',
+                                    SOURCE => $self->demux_command() );
+
+    my @finished = ();
+    foreach my $host ( @$hosts ){
+        my $command = $tmpl->fill_in( HASH => { host => $host } );
+        $log->info("Will do ".$command);
+        my $io_h = IO::Pipe->new()->reader( $command );
+        my $w;
+        my $finished = AnyEvent->condvar();
+        push @finished , $finished;
+        $w = AnyEvent->io( fh => $io_h,
+                           poll => 'r',
+                           cb => sub{
+                               my $line = <$io_h>;
+                               unless( $line ){
+                                   undef $w;
+                                   $finished->send();
+                                   return;
+                               }
+                               print $host.": ".$line;
+                           });
+    }
+
+    map{ $_->recv() } @finished;
+    return 0;
 }
 
 __PACKAGE__->meta->make_immutable();

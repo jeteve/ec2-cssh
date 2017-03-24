@@ -9,10 +9,11 @@ use warnings;
 use Getopt::Long;
 use App::EC2Cssh;
 use Log::Any qw/$log/;
-use Log::Any::Adapter qw/Stdout log_level info/;
+use Log::Any::Adapter qw/Stderr log_level info/;
 use Pod::Usage;
 
 my $set;
+my $demux_command;
 my $verbose;
 my $config;
 my $help;
@@ -20,12 +21,13 @@ my $help;
 GetOptions(
     "config=s" => \$config,
     "set=s" => \$set,
+    "demux=s" => \$demux_command,
     "verbose" => \$verbose,
     "help" => \$help,
 );
 
 if( $verbose ){
-    Log::Any::Adapter->set('Stdout' , log_level => 'trace' );
+    Log::Any::Adapter->set('Stderr' , log_level => 'trace' );
 }
 
 
@@ -42,7 +44,9 @@ eval{
         my $sets = $cssh->config()->{ec2_sets};
         die "No set defined. Do ec2-cssh -s=<one available set>\n";
     }
-    my $cssh = App::EC2Cssh->new({ set => $set , ( $config ? ( config_file => $config ) : () )  });
+    my $cssh = App::EC2Cssh->new({ set => $set,
+                                   demux_command => $demux_command,
+                                   ( $config ? ( config_file => $config ) : () )  });
     exit($cssh->main());
 };
 if( my $err = $@ ){
@@ -75,6 +79,8 @@ Cssh using a predefined set called 'frontend' in your config file (see CONFIGURA
 
   ec2-ssh -s=frontends
 
+  ec2-ssh -s=frontends --demux 'ssh user@{$host} tail -f /var/log/syslog'
+
 =head1 OPTIONS
 
 =over
@@ -82,6 +88,10 @@ Cssh using a predefined set called 'frontend' in your config file (see CONFIGURA
 =item --set=<name>, -s=<name>
 
 B<Required.> Use the set <name> of instances defined in your config file
+
+=item --demux <command>
+
+Optional. Use this command and demux their output to the shell instead of launching a cssh interactive session.
 
 =item --verbose, -v
 
