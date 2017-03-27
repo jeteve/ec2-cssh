@@ -45,7 +45,7 @@ eval{
         die "No set defined. Do ec2-cssh -s=<one available set>\n";
     }
     my $cssh = App::EC2Cssh->new({ set => $set,
-                                   demux_command => $demux_command,
+                                   ( $demux_command ? ( demux_command => $demux_command ) : () ),
                                    ( $config ? ( config_file => $config ) : () )  });
     exit($cssh->main());
 };
