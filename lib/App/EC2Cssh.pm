@@ -88,6 +88,7 @@ sub main{
     my ($self) = @_;
 
     my @hosts;
+    my %hostnames = ();
     $log->info("Listing instances for set='".$self->set()."'");
 
     my $set_config = {};
@@ -99,23 +100,29 @@ sub main{
     foreach my $ri ( @$reservation_infos ){
         my $instances = $ri->instances_set();
         foreach my $instance ( @$instances ){
+            my $host =  $instance->dns_name();
+            unless( $host ){
+                $log->warn("Instance ".$instance->instance_id()." does not have a dns_name. Skipping");
+                next;
+            }
+            $log->debug("Adding host $host");
+            push @hosts  , $host;
+
             if( my $tagset = $instance->tag_set() ){
                 foreach my $tag ( @$tagset ){
                     $log->trace("Host has tag: ".$tag->key().':'.( $tag->value() // 'UNDEF' ));
+                    if( $tag->key() eq 'Name' ){
+                        $log->debug("Host $host name is ".$tag->value());
+                        $hostnames{$host} = $tag->value();
+                    }
                 }
-            }
-            if( my $host = $instance->dns_name() ){
-                $log->debug("Adding host $host");
-                push @hosts  , $host;
-            }else{
-                $log->warn("Instance ".$instance->instance_id()." does not have a dns_name. Skipping");
             }
         }
     }
 
     $log->info("Got ".scalar( @hosts )." hosts");
     if( $self->has_demux_command() ){
-        return $self->do_demux_command( \@hosts );
+        return $self->do_demux_command( \@hosts , \%hostnames );
     }
 
     # No demux command, just carry on using the configured command for multiple hosts.
@@ -128,7 +135,8 @@ sub main{
 
     my $command = $tmpl->fill_in( SAFE => Safe->new(),
                                   HASH => {
-                                      hosts => \@hosts
+                                      hosts => \@hosts,
+                                      hostnames => \%hostnames,
                                   }
                               );
     $log->info("Will do '".substr($command, 0, 80)."..'");
@@ -143,7 +151,7 @@ sub main{
 $| = 1;
 
 sub do_demux_command{
-    my ($self, $hosts) = @_;
+    my ($self, $hosts, $hostnames) = @_;
 
     $log->info("Will do ".$self->demux_command()." on each of the hosts");
 
@@ -152,10 +160,12 @@ sub do_demux_command{
 
     my @finished = ();
     foreach my $host ( @$hosts ){
-        my $command = $tmpl->fill_in( HASH => { host => $host } );
+        my $hostname = $hostnames->{$host};
+        my $command = $tmpl->fill_in( HASH => { host => $host , hostname => $hostname } );
         $log->debug("Will do ".$command);
         my $io_h = IO::Pipe->new()->reader( $command );
         my $w;
+        my $toprint = $hostname || $host;
         my $finished = AnyEvent->condvar();
         push @finished , $finished;
         $w = AnyEvent->io( fh => $io_h,
@@ -167,7 +177,7 @@ sub do_demux_command{
                                    $finished->send();
                                    return;
                                }
-                               print $host.": ".$line;
+                               print "$toprint: ".$line;
                            });
     }
 
